@@ -24,12 +24,16 @@
        xmlns:webflow="http://www.springframework.org/schema/webflow-config"
        xmlns:p="http://www.springframework.org/schema/p"
        xmlns:c="http://www.springframework.org/schema/c"
+       xmlns:context="http://www.springframework.org/schema/context"
        xmlns:util="http://www.springframework.org/schema/util"
        xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
        http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd
-       http://www.springframework.org/schema/webflow-config http://www.springframework.org/schema/webflow-config/spring-webflow-config-2.3.xsd">
+       http://www.springframework.org/schema/webflow-config http://www.springframework.org/schema/webflow-config/spring-webflow-config-2.3.xsd
+       http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd">
 
   <import resource="spring-configuration/propertyFileConfigurer.xml"/>
+
+  <!-- context:component-scan base-package="org.leleuj" /-->
 
   <!-- Theme Resolver -->
   <bean id="themeResolver" class="org.jasig.cas.services.web.ServiceThemeResolver"
@@ -90,7 +94,7 @@
         <prop key="/status">healthCheckController</prop>
         <prop key="/statistics">statisticsController</prop>
         <!-- #DEMO# -->
-        <prop key="/oauth2.0/*">oauth20WrapperController</prop>
+        <!-- prop key="/oauth2.0/*">oauth20WrapperController</prop-->
         <!-- #DEMO# -->
       </util:properties>
     </property>
@@ -106,13 +110,13 @@
   </bean>
 
   <!-- #DEMO# -->
-  <bean
+  <!-- <bean
     id="oauth20WrapperController"
     class="org.jasig.cas.support.oauth.web.OAuth20WrapperController"
     p:loginUrl="http://localhost:8080/cas2/login"
     p:servicesManager-ref="servicesManager"
     p:ticketRegistry-ref="ticketRegistry"
-    p:timeout="7200" />
+    p:timeout="7200" /-->
   <!-- #DEMO# -->
 
   <bean id="passThroughController" class="org.springframework.web.servlet.mvc.UrlFilenameViewController"/>
@@ -121,7 +125,7 @@
   <bean id="loginFlowHandlerMapping" class="org.springframework.webflow.mvc.servlet.FlowHandlerMapping"
         p:flowRegistry-ref="loginFlowRegistry" p:order="2">
     <property name="interceptors">
-      <ref local="localeChangeInterceptor" />
+      <ref bean="localeChangeInterceptor" />
     </property>
   </bean>
 
@@ -148,7 +152,7 @@
   <bean id="logoutFlowHandlerMapping" class="org.springframework.webflow.mvc.servlet.FlowHandlerMapping"
         p:flowRegistry-ref="logoutFlowRegistry" p:order="3">
     <property name="interceptors">
-      <ref local="localeChangeInterceptor" />
+      <ref bean="localeChangeInterceptor" />
     </property>
   </bean>
 
@@ -188,7 +192,7 @@
   <bean id="viewFactoryCreator" class="org.springframework.webflow.mvc.builder.MvcViewFactoryCreator">
     <property name="viewResolvers">
       <util:list>
-        <ref local="viewResolver"/>
+        <ref bean="viewResolver"/>
       </util:list>
     </property>
   </bean>

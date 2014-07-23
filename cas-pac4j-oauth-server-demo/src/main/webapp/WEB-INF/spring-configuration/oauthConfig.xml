@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:p="http://www.springframework.org/schema/p"
+    xmlns:aop="http://www.springframework.org/schema/aop"
+    xmlns:oauth2="http://www.springframework.org/schema/security/oauth2"
+    xmlns:sec="http://www.springframework.org/schema/security"
+    xmlns:mvc="http://www.springframework.org/schema/mvc"
+    xmlns:context="http://www.springframework.org/schema/context"
+    xmlns:c="http://www.springframework.org/schema/c"
+    xsi:schemaLocation="http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-3.1.xsd
+        http://www.springframework.org/schema/security/oauth2 http://www.springframework.org/schema/security/spring-security-oauth2.xsd
+        http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc-3.1.xsd
+        http://www.springframework.org/schema/security http://www.springframework.org/schema/security/spring-security-3.2.xsd
+        http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.1.xsd
+        http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.1.xsd">
+
+    <!-- OAuth authorization & resource servers -->
+    <oauth2:authorization-server
+        client-details-service-ref="casClientDetailsService" token-services-ref="tokenServices"
+        authorization-endpoint-url="/oauth2.0/authorize" token-endpoint-url="/oauth2.0/accessToken"
+        user-approval-page="forward:/oauth2.0/confirm_access"
+        error-page="forward:error">
+        <oauth2:authorization-code />
+    </oauth2:authorization-server>
+
+    <oauth2:resource-server
+        id="oauth2ProviderFilter"
+        token-services-ref="tokenServices"/>
+
+    <!-- security -->
+    <sec:http entry-point-ref="casEntryPoint" pattern="/oauth2.0/profile*">
+        <sec:custom-filter ref="casFilter" position="CAS_FILTER" />
+    </sec:http>
+    <sec:http entry-point-ref="casEntryPoint" pattern="/oauth2.0/authorize*">
+        <sec:custom-filter ref="oauth2ProviderFilter" before="PRE_AUTH_FILTER" />
+        <sec:custom-filter ref="casFilter" position="CAS_FILTER" />
+    </sec:http>
+    <sec:http entry-point-ref="casEntryPoint" pattern="/oauth2.0/confirm_access*">
+        <sec:custom-filter ref="oauth2ProviderFilter" before="PRE_AUTH_FILTER" />
+        <sec:custom-filter ref="casFilter" position="CAS_FILTER" />
+    </sec:http>
+
+    <!-- OAuth configuration -->
+    <bean id="casClientDetailsService" class="org.jasig.cas.support.oauth.CasClientDetailsService"
+        c:servicesManager-ref="servicesManager" />
+
+    <bean id="tokenServices" class="org.springframework.security.oauth2.provider.token.DefaultTokenServices"
+        p:support-refresh-token="false"
+        p:access-token-validity-seconds="${tgt.timeToKillInSeconds:7200}">
+        <property name="tokenStore">
+            <bean class="org.springframework.security.oauth2.provider.token.store.InMemoryTokenStore" />
+        </property>
+    </bean>
+
+    <!-- CAS protection configuration -->
+    <!-- TODO : replace /oauth2.0, /cas2/login, http://localhost:8080/cas2/ -->
+    <bean id="serviceProperties" class="org.springframework.security.cas.ServiceProperties"
+        p:service="/oauth2.0/j_spring_cas_security_check" />
+
+    <bean id="casEntryPoint" class="org.springframework.security.cas.web.CasAuthenticationEntryPoint"
+        p:login-url="/cas2/login" p:serviceProperties-ref="serviceProperties" />
+
+    <bean id="casFilter"
+        class="org.springframework.security.cas.web.CasAuthenticationFilter"
+        p:filter-processes-url="/oauth2.0/j_spring_cas_security_check"
+        p:authentication-manager-ref="resourceOwnerAuthenticationManager" />
+
+    <sec:authentication-manager id="resourceOwnerAuthenticationManager">
+        <sec:authentication-provider ref="casClientAuthenticationProvider" />
+    </sec:authentication-manager>
+        
+    <!-- Used by the cas client to populate the authentication headers with required information that's not populated by the 
+        casServerAuthenticationManager -->
+    <bean id="casClientAuthenticationProvider" class="org.springframework.security.cas.authentication.CasAuthenticationProvider"
+        p:key="an_id_for_this_auth_provider_only" p:service-properties-ref="serviceProperties">
+        <property name="authenticationUserDetailsService">
+<!--             We can't really use the clientDetailsUserService here because it describes the *client* -->
+            <bean class="org.springframework.security.core.userdetails.UserDetailsByNameServiceWrapper"
+                c:user-details-service-ref="testUserService" />
+                <!--c:user-details-service-ref="clientDetailsUserService"/>-->
+        </property>
+        <property name="ticketValidator">
+            <bean class="org.jasig.cas.client.validation.Cas20ServiceTicketValidator"
+                c:cas-server-url-prefix="http://localhost:8080/cas2/" />
+        </property>
+    </bean>
+
+    <!-- TODO : remove -->
+    <sec:user-service id="testUserService">
+        <sec:user name="leleuj@gmail.com" password="not used" authorities="ROLE_USER" />
+    </sec:user-service>
+</beans>
